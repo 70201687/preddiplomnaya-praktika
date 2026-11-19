@@ -10,6 +10,8 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.callbacks import EarlyStopping
+from src.dataset_utils import filter_and_remap_labels
+
 
 from src.config import (
     DATASET_PATH, MODELS_DIR, EPOCHS, BATCH_SIZE,
@@ -23,57 +25,44 @@ from src.model import build_model
 
 def load_and_prepare_data():
     """
-    Загружает датасет и подготавливает данные для обучения.
-    Возвращает: X_train, X_test, y_train, y_test, tokenizer
+    Загружает датасет, фильтрует классы и готовит данные для обучения.
     """
     print("=" * 60)
     print("ШАГ 1: ЗАГРУЗКА И ПОДГОТОВКА ДАННЫХ")
     print("=" * 60)
 
-    # Проверяем, существует ли датасет
     if not os.path.exists(DATASET_PATH):
-        print("📥 Датасет не найден. Начинаем загрузку...")
+        print(" Датасет не найден. Начинаем загрузку...")
         if not download_dataset():
             raise FileNotFoundError("Не удалось загрузить датасет. Проверьте ссылку в config.py")
 
-    # Загружаем данные
     print(f" Загрузка данных из: {DATASET_PATH}")
-    df = pd.read_csv(DATASET_PATH)
+    # sep=None + engine='python' — автоопределение разделителя (CSV может быть с ',' или '\t')
+    df = pd.read_csv(DATASET_PATH, sep=None, engine='python')
     print(f" Загружено строк: {len(df)}")
 
-    # Проверяем наличие необходимых колонок
     if 'text' not in df.columns or 'sentiment' not in df.columns:
         raise ValueError(f"Датасет должен содержать колонки 'text' и 'sentiment'. Найдены: {df.columns.tolist()}")
 
-    # Удаляем строки с пропущенными значениями
-    df = df.dropna(subset=['text', 'sentiment'])
-    print(f" После удаления пропусков: {len(df)} строк")
+    # Фильтрация 4-го класса и перекодировка меток в 0/1/2
+    df = filter_and_remap_labels(df)
 
-    # Разделяем данные на текст и метки
     texts = df['text'].astype(str).tolist()
-    labels = df['sentiment'].astype(int).tolist()
+    labels = df['label'].astype(int).tolist()
 
-    # Предобрабатываем текст
-    print(" Предобработка текста (это может занять время)...")
+    print(" Предобработка текста...")
     cleaned_texts = [preprocess_text(text) for text in texts]
-    print(f" Предобработка завершена")
+    print(" Предобработка завершена")
 
-    # Создаём и обучаем токенизатор
     tokenizer = build_tokenizer(cleaned_texts)
 
-    # Преобразуем текст в числовые последовательности
     print(" Векторизация текста...")
     sequences = texts_to_sequences(tokenizer, cleaned_texts)
     print(f" Векторизация завершена. Shape: {sequences.shape}")
 
-    # Разделяем на обучающую и тестовую выборки (80% / 20%)
-    print(" Разделение данных на train/test (80/20)...")
+    print("✂ Разделение данных на train/test (80/20)...")
     X_train, X_test, y_train, y_test = train_test_split(
-        sequences,
-        labels,
-        test_size=0.2,
-        random_state=42,
-        stratify=labels  # Сохраняем пропорции классов
+        sequences, labels, test_size=0.2, random_state=42, stratify=labels
     )
     print(f" Train: {len(X_train)} строк, Test: {len(X_test)} строк")
 
