@@ -18,7 +18,7 @@ os.makedirs(MODELS_DIR, exist_ok=True)
 
 # Параметры датасета
 # ВАЖНО: Сюда нужно будет вставить прямую ссылку на CSV-файл с Kaggle или GitHub
-DATASET_URL = "https://raw.githubusercontent.com/example/rusentiment.csv"  # ЗАМЕНИТЬ НА РЕАЛЬНУЮ ССЫЛКУ
+DATASET_URL = "https://raw.githubusercontent.com/searayeah/russian-sentiment-emotion-datasets/main/RuSentiment/rusentiment_preselected_posts.csv"
 DATASET_PATH = os.path.join(DATA_DIR, "rusentiment.csv")
 
 # Параметры предобработки
